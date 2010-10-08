@@ -1,273 +1,302 @@
 //Nick's amazing automatic cover maker
-//Last updated 23 October 2009
+//Rewritten 8 October
 
 
-//User variables:
-//var myFlap = 100;		//This sets the flap width
-var myFlapWrap = 10;	//This sets the amount of wraparound for the flaps on the dustwrapper
-var myAllowance = 3;	//This sets the board allowance
-//End of user variables
+var bleeds = {
+    pb: 3,
+    rb_dw: 3,
+    sb_dw: 3,
+    mm_plc: 15,
+    rb_plc: 15,
+    sb_plc: 15
+};
 
+var slugs = {
+    pb: 6,
+    rb_dw: 6,
+    sb_dw: 6,
+    mm_plc: 20,
+    rb_plc: 18,
+    sb_plc: 18
+};
 
-var myDialog = app.dialogs.add({name:"Nick's new cover script", canCancel:true}); //New dialog
+var flapWraparound = 10; //How much wraparound needed for flaps
+var boardAllowance = 3;
 
-with(myDialog) {
-	with(dialogColumns.add()) {
-		with(borderPanels.add()) {
-			with(dialogColumns.add()) {
-				staticTexts.add({staticLabel:"Height:"});
-				staticTexts.add({staticLabel:"Width:"});
-				staticTexts.add({staticLabel:"Spine:"});
-				staticTexts.add({staticLabel:"Flap width:"});
-			}
-			with(dialogColumns.add()) {
-				var myHeightField = realEditboxes.add();
-				var myWidthField = realEditboxes.add(); 
-				var mySpineField = realEditboxes.add();
-				var myFlapField = realEditboxes.add(); 
-			}
-			with(dialogColumns.add()) {
-				var myHeightUnitsMenu = dropdowns.add({stringList:
-				["mm", "in", "pt"], selectedIndex:0});
-				var myWidthUnitsMenu = dropdowns.add({stringList:
-				["mm", "in", "pt"], selectedIndex:0});
-				var mySpineUnitsMenu = dropdowns.add({stringList:
-				["mm", "in", "pt"], selectedIndex:0});
-				var myFlapUnitsMenu = dropdowns.add({stringList:
-				["mm", "in", "pt"], selectedIndex:0});
-			}
-		}
-		with(borderPanels.add()) {
-			with(dialogColumns.add()) {
-				var myradiobuttonGroup = radiobuttonGroups.add();
-				with(myradiobuttonGroup) {
-					var myRadioButton0 =radiobuttonControls.add({staticLabel:"Paperback cover", checkedState:true});
-					var myRadioButton1 =radiobuttonControls.add({staticLabel:"Roundback dustwrapper (use TPS measurements)"});
-					var myRadioButton2 =radiobuttonControls.add({staticLabel:"Squareback dustwrapper (like MoTP)"});
-					var myRadioButton3 =radiobuttonControls.add({staticLabel:"MM PLC"});
-					var myRadioButton4 =radiobuttonControls.add({staticLabel:"Roundback PLC (use TPS measurements)"});
-					var myRadioButton5 =radiobuttonControls.add({staticLabel:"Squareback PLC (use TPS measurements)"});
-				}
-			}
-		}
-	}
+function DrawLine(doc) {
+    return function (x1, y1, x2, y2) {
+        with (doc.pages.item(0).graphicLines.add().paths.item(0)) {
+	    with (pathPoints.item(0)) {
+	        anchor = [x1, y1];
+	    }
+	    with (pathPoints.item(1)) {
+	        anchor = [x2, y2];
+	    }
+        }
+    }
 }
 
-if(myDialog.show() == true) {
-	
-	var myHeight = myHeightField.editValue;
-	var myWidth = myWidthField.editValue;
-	var mySpine = mySpineField.editValue;
-	var myFlap = myFlapField.editValue;
-	var myType = myradiobuttonGroup.selectedButton;
-	//$.writeln(myType);
-	var myBleed;
-	var mySlug;
-	if(myType == 3) { //Sets large bleed for Multiligual Matters PLCs
-		myBleed = 15;
-		mySlug = 20;
-	}
-	else if(myType == 4 || myType == 5) { //Standard PLC bleeds
-		myBleed = 15;
-		mySlug = 18;
-	}
-	else { //Normal Bleed and Slug
-		myBleed = 3;
-		mySlug = 6;
-	}
-
-	
-	//This part converts all user input measurements to millimetres
-	if(myHeightUnitsMenu.selectedIndex == 0) {
-		;
-	}
-	else if(myHeightUnitsMenu.selectedIndex == 1) {
-		myHeight *= 25.4;
-	}
-	else {
-		myHeight *= 0.35278;
-	}
-
-	if(myWidthUnitsMenu.selectedIndex == 0) {
-		;
-	}
-	else if(myWidthUnitsMenu.selectedIndex == 1) {
-		myWidth *= 25.4;
-	}
-	else {
-		myWidth *= 0.35278;
-	}
-
-	if(mySpineUnitsMenu.selectedIndex == 0) {
-		;
-	}
-	else if(mySpineUnitsMenu.selectedIndex == 1) {
-		mySpine *= 25.4;
-	}
-	else {
-		mySpine *=  0.35278;
-	}
-
-	if(myFlapUnitsMenu.selectedIndex == 0) {
-		;
-	}
-	else if(myFlapUnitsMenu.selectedIndex == 1) {
-		myFlap *= 25.4;
-	}
-	else {
-		myFlap *=  0.35278;
-	}
-	
-	
-
-
-
-	switch(myType) {
-	case 0: // If paperback cover
-		var myPageWidth = myWidth * 2 + mySpine;
-		break;
-	case 1: // If Dustwrapper
-		myWidth += myAllowance; // Add board allowance (roundback only has board allowance on outside edge)
-		myHeight += myAllowance * 2; // Add board allowance
-		var myPageWidth = (myWidth * 2) + mySpine + myFlap * 2;
-		break;
-	case 2: // If squareback dustwrapper
-		myWidth += myAllowance * 2; // Add board allowance
-		myHeight += myAllowance * 2; // Add board allowance
-		var myPageWidth = (myWidth * 2) + mySpine + myFlap * 2;
-		break;
-	case 3: //MM PLC
-		var myPageWidth = (myWidth * 2) + mySpine;
-		break;
-	case 4: //Roundback PLC
-		myWidth += myAllowance;
-		myWidth += 2; //extra 2mm either side for shoulder
-		myHeight += myAllowance * 2;
-		var myPageWidth = (myWidth * 2) + mySpine;
-		break;
-	case 5: //Squareback PLC
-		myWidth += myAllowance * 2; // adds allowance for overhang and board on spine
-		myWidth += 2; //extra 2mm either side for shoulder
-		myHeight += myAllowance * 2;
-		var myPageWidth = (myWidth * 2) + mySpine;
-		break;
-	default:
-		break;
-	}
-		
-
-	var myDocument = app.documents.add();
-
-	with(myDocument.pages.item(0).marginPreferences) {
-		//Set margins to 0
-		bottom = 0;
-		top = 0;
-		left = 0;
-		right = 0;
-		
-		columnCount = 2;
-		columnGutter = mySpine;
-	}
-	
-	with(myDocument.viewPreferences){ //Set units to mm for ease of calculations
-		horizontalMeasurementUnits = MeasurementUnits.millimeters;
-		verticalMeasurementUnits = MeasurementUnits.millimeters;
-	}
-		
-	with(myDocument.documentPreferences){
-		pageHeight = myHeight;
-		pageWidth = myPageWidth;
-		documentBleedUniformSize = true;
-		documentSlugUniformSize = true;
-		documentBleedTopOffset = myBleed;
-		slugTopOffset = mySlug;
-		facingPages = false;
-	}
-
-	myDocument.layers.add({name:"Trim marks"});
-	
-	//These marks are in the same place regardless of type
-	myDrawLines(-myBleed, 0, -mySlug, 0); //Top-left horizontal
-	myDrawLines(0, -myBleed, 0, -mySlug); //Top-left vertical
-	myDrawLines(-myBleed, myHeight, -mySlug, myHeight); //Bottom-left horizontal
-	myDrawLines(0, myHeight + myBleed, 0, myHeight + mySlug); //Bottom-left vertical
-	
-	if(myType == 1 || myType == 2) { //These are marks for dustwrapper
-		//Marks for top
-		myDrawLines(myFlap, -myBleed, myFlap, -mySlug); //Top left flap
-		myDrawLines(myFlap + myWidth, -myBleed, myFlap + myWidth, -mySlug); //Top spine-left
-		myDrawLines(myFlap + myWidth + mySpine, -myBleed, myFlap + myWidth + mySpine, -mySlug); //Top spine-right
-		myDrawLines(myFlap + myWidth * 2 + mySpine, -myBleed, myFlap + myWidth * 2 + mySpine, -mySlug); //Top right flap
-		myDrawLines(myFlap * 2 + myWidth * 2 + mySpine, -myBleed, myFlap * 2 + myWidth * 2 + mySpine, -mySlug); //Top-right vertical
-		myDrawLines(myFlap * 2 + myWidth * 2 + mySpine + myBleed, 0, myFlap * 2 + myWidth * 2 + mySpine + mySlug, 0); //Top-right horizontal
-		//Marks for bottom
-		myDrawLines(myFlap, myHeight + myBleed, myFlap, myHeight + mySlug); //Bottom left flap
-		myDrawLines(myFlap + myWidth, myHeight + myBleed, myFlap + myWidth, myHeight + mySlug); //Bottom spine-left
-		myDrawLines(myFlap + myWidth + mySpine, myHeight + myBleed, myFlap + myWidth + mySpine, myHeight + mySlug); //Bottom spine-right
-		myDrawLines(myFlap + myWidth * 2 + mySpine, myHeight + myBleed, myFlap + myWidth * 2 + mySpine, myHeight + mySlug); //Bottom right flap
-		myDrawLines(myFlap * 2 + myWidth * 2 + mySpine, myHeight + myBleed, myFlap * 2 + myWidth * 2 + mySpine, myHeight + mySlug); //Bottom-right vertical
-		myDrawLines(myFlap * 2 + myWidth * 2 + mySpine + myBleed, myHeight, myFlap * 2 + myWidth * 2 + mySpine + mySlug, myHeight); //Bottom-right horizontal
-	}
-	
-	else { //These are marks for non-dustwrapper
-		myDrawLines(myWidth, -myBleed, myWidth, -mySlug); //Top spine-left
-		myDrawLines(myWidth + mySpine, -myBleed, myWidth + mySpine, -mySlug); //Top spine-right
-		myDrawLines(myWidth * 2 + mySpine, -myBleed, myWidth * 2 + mySpine, -mySlug); //Top-right vertical
-		myDrawLines(myWidth * 2 + mySpine + myBleed, 0, myWidth * 2 + mySpine + mySlug, 0); //Top-right horizontal
-		myDrawLines(myWidth, myHeight + myBleed, myWidth, myHeight + mySlug); //Bottom spine-left
-		myDrawLines(myWidth + mySpine, myHeight + myBleed, myWidth + mySpine, myHeight + mySlug); //Bottom spine-right
-		myDrawLines(myWidth * 2 + mySpine, myHeight + myBleed, myWidth * 2 + mySpine, myHeight + mySlug); //Bottom-right vertical
-		myDrawLines(myWidth * 2 + mySpine + myBleed, myHeight, myWidth * 2 + mySpine + mySlug, myHeight); //Bottom-right horizontal
-	}
-
-	with(myDocument.layers.item("Trim marks").graphicLines) {
-		for(var i = 0; i < count(); i++) { //loop through all graphicLines making them registration and 0.5pt
-			myDocument.layers.item("Trim marks").graphicLines.item(i).strokeColor = "Registration";
-			myDocument.layers.item("Trim marks").graphicLines.item(i).strokeWeight = "0.5pt";
-		}
-	}
-
-	if(myType == 1 || myType == 2) {	// For dustwrappers, add guides at flaps and wraparounds
-		myDrawGuide(myFlap - myFlapWrap);
-		myDrawGuide(myFlap);
-		myDrawGuide(myPageWidth - myFlap + myFlapWrap);
-		myDrawGuide(myPageWidth - myFlap);
-	}
-	if(myType == 4 || myType == 5) { // For PLCs, draw guides showing extent of shoulder
-		myDrawGuide(myWidth - 9);
-		myDrawGuide(myWidth + mySpine + 9);
-	}
-	
-	myDocument.layers.item("Trim marks").locked = true; //Now we're done with Trim marks layer, lock it
-	
-	//The following two lines are because I couldn't work out how to make layer 1 active, so had to make a new layer and delete original one
-	var newLayer = myDocument.layers.add({name:"Main layer"}) ; //Make new layer
-	myDocument.layers.item(2).remove(); //Get rid of original layer
-	
-	
-	myDialog.destroy(); //Remove dialog from memory
+function DrawGuide(doc) {
+    return function (myGuideLocation) {
+        with (app.activeWindow.activeSpread) {	
+	    with (guides.add()) {
+	        orientation = HorizontalOrVertical.vertical;
+	        location = myGuideLocation;
+	    }
+        }
+    }
 }
 
-else { //User clicked cancel
-	myDialog.destroy();
+function showDialog() {
+    var dimensionStrings = {height: "Height", width: "Width", spine: "Spine", flap: "Flap width"};
+    var fields = {};
+    var units = {};
+
+    var dimensions = {};
+    var dimensionUnits = {};
+
+    var coverTypeStrings = {
+        pb: "Paperback cover",
+        rb_dw: "Roundback dustwrapper (use TPS measurements)",
+        sb_dw: "Squareback dustwrapper (like MoTP)",
+        mm_plc: "MM PLC",
+        rb_plc: "Roundback PLC (use TPS measurements)",
+        sb_plc: "Squareback PLC (use TPS measurements)"
+    }
+
+    var dialog = app.dialogs.add({name:"Nick's new cover script", canCancel:true});
+    var outerColumn = dialog.dialogColumns.add();
+    var borderPanelTop = outerColumn.borderPanels.add();
+    var labelsColumn = borderPanelTop.dialogColumns.add();
+    var editboxColumn = borderPanelTop.dialogColumns.add();
+    var dropdownColumn = borderPanelTop.dialogColumns.add();
+
+    var borderPanelBottom = outerColumn.borderPanels.add();
+    var radioColumn = borderPanelBottom.dialogColumns.add();
+    var radioGroup = radioColumn.radiobuttonGroups.add();
+
+
+    for (var dimension in dimensionStrings) {
+        if (dimensionStrings.hasOwnProperty(dimension)) {
+            labelsColumn.staticTexts.add(
+                {staticLabel: dimensionStrings[dimension] + ":"}
+            );
+            fields[dimension] = editboxColumn.realEditboxes.add();
+            units[dimension] = dropdownColumn.dropdowns.add({
+                stringList: ["mm", "in", "pt"],
+                selectedIndex: 0
+            });
+        }
+    }
+
+    var coverTypeArray = [];
+    for (var type in coverTypeStrings) {
+        if (coverTypeStrings.hasOwnProperty(type)) {
+            coverTypeArray.push(type);
+            radioGroup.radiobuttonControls.add({
+                staticLabel: coverTypeStrings[type]
+            });
+        }
+        radioGroup.radiobuttonControls[0].checkedState = true;
+    }
+
+    if (dialog.show()) {
+        for (var field in fields) {
+            if (fields.hasOwnProperty(field)) {
+                var unit = units[field].stringList[units[field].selectedIndex];
+                dimensions[field] = [fields[field].editValue, unit];
+            }
+        }
+        var coverType = coverTypeArray[radioGroup.selectedButton];
+        return {dimensions: dimensions, coverType: coverType};
+    }
+    else {
+        return false;
+    }
 }
 
-function myDrawLines(x1, y1, x2, y2) { //Does what it says on the tin
-	with(myDocument.pages.item(0).graphicLines.add().paths.item(0)) {
-		with(pathPoints.item(0)) {
-			anchor = [x1, y1];
-		}
-		with(pathPoints.item(1)) {
-			anchor = [x2, y2];
-		}
-	}
+function normalise(dimensions) {
+    normalised = {};
+    for (var field in dimensions) {
+        if (dimensions.hasOwnProperty(field)) {
+            var dimension = dimensions[field][0];
+            var as_mm;
+            var unit = dimensions[field][1];
+            switch (unit) {
+            case 'mm':
+                as_mm = dimension;
+                break;
+            case 'in':
+                as_mm = dimension * 25.4;
+                break;
+            case 'pt':
+                as_mm = dimension * 0.35278;
+                break;
+            default:
+                var errorString = 'Error - unexpected unit: ' + unit;
+                $.writeln(errorString);
+                throw errorString;
+            }
+
+            normalised[field] = as_mm;
+        }
+    }
+    return normalised;
 }
 
-function myDrawGuide(myGuideLocation){ //Does what it says on the tin
-	with(app.activeWindow.activeSpread){	
-		with (guides.add()){
-			orientation=HorizontalOrVertical.vertical;
-			location=myGuideLocation;
-		}
-	}
+function calculateDimensions(unNormalisedDimensions, coverType) {
+    for (var field in unNormalisedDimensions) {
+        $.writeln(unNormalisedDimensions[field]);
+    }
+
+    dimensions = normalise(unNormalisedDimensions);
+    switch (coverType) {
+    case 'pb':
+        dimensions['doc_width'] = (dimensions['width'] * 2) + dimensions['spine'];
+        break;
+    case 'rb_dw':
+        dimensions['width'] += boardAllowance;
+        dimensions['height'] += boardAllowance * 2;
+        dimensions['doc_width'] = (dimensions['width'] * 2) + dimensions['spine'] +
+            (dimensions['flap'] * 2);
+        break;
+    case 'sb_dw':
+        dimensions['width'] += boardAllowance * 2;
+        dimensions['height'] += boardAllowance * 2;
+        dimensions['doc_width'] = (dimensions['width'] * 2) + dimensions['spine'] +
+            (dimensions['flap'] * 2);
+        break;
+    case 'mm_plc':
+        dimensions['doc_width'] = (dimensions['width'] * 2) + dimensions['spine'];
+        break;
+    case 'rb_plc':
+        dimensions['width'] += boardAllowance + 2; //extra 2mm for shoulder
+        dimensions['height'] += boardAllowance * 2;
+        dimensions['doc_width'] = (dimensions['width'] * 2) + dimensions['spine'];
+        break;
+    case 'sb_plc':
+        dimensions['width'] += (boardAllowance * 2) + 2; //extra 2mm for shoulder
+        dimensions['height'] += (boardAllowance * 2);
+        dimensions['doc_width'] = (dimensions['width'] * 2) + dimensions['spine'];
+        break;
+    default:
+        var errorString = 'Error - unexpected cover type: ' + coverType;
+        $.writeln(errorString);
+        throw errorString;
+    }
+
+    dimensions['bleed'] = bleeds[coverType];
+    dimensions['slug'] = slugs[coverType];
+
+    return dimensions;
 }
+
+function makeCover(dimensions, coverType) {
+    var bleed = dimensions['bleed'];
+    var slug = dimensions['slug'];
+    var width = dimensions['width'];
+    var doc_width = dimensions['doc_width'];
+    var height = dimensions['height'];
+    var flap = dimensions['flap'];
+    var spine = dimensions['spine'];
+    
+    var doc = app.documents.add();
+    m_prefs = doc.pages.item(0).marginPreferences;
+    m_prefs.bottom = 0;
+    m_prefs.top = 0;
+    m_prefs.left = 0;
+    m_prefs.right = 0;
+    m_prefs.columnCount = 2;
+    m_prefs.columnGutter = dimensions['spine'];
+
+    v_prefs = doc.viewPreferences;
+    v_prefs.horizontalMeasurementUnits = MeasurementUnits.millimeters;
+    v_prefs.verticalMeasurementUnits = MeasurementUnits.millimeters;
+
+
+    doc_prefs = doc.documentPreferences;
+    doc_prefs.pageHeight = height;
+    doc_prefs.pageWidth = doc_width;
+    doc_prefs.documentBleedUniformSize = true;
+    doc_prefs.documentSlugUniformSize = true;
+    doc_prefs.documentBleedTopOffset = bleed;
+    doc_prefs.slugTopOffset = slug;
+    doc_prefs.facingPages = false;
+
+    doc.layers.add({name: "Trim marks"});
+
+    var drawLine = DrawLine(doc);
+    var drawGuide = DrawGuide(doc);
+    //Corner trim marks
+    drawLine(-bleed, 0, -slug, 0);
+    drawLine(0, -bleed, 0, -slug);
+    drawLine(-bleed, height, -slug, height);
+    drawLine(0, height + bleed, 0, height + slug);
+    drawLine(doc_width + bleed, 0, doc_width + slug, 0);
+    drawLine(doc_width, -bleed, doc_width, -slug);
+    drawLine(doc_width + bleed, height, doc_width + slug, height);
+    drawLine(doc_width, height + bleed, doc_width, height + slug);
+
+    if (coverType === 'rb_dw' || coverType === 'sb_dw') { //dustwrappers
+	//Marks for top
+	drawLine(flap, -bleed, flap, -slug); //Top left flap
+	drawLine(flap + width, -bleed, flap + width, -slug); //Top spine-left
+	drawLine(flap + width + spine, -bleed, flap + width + spine, -slug); //Top spine-right
+	drawLine(flap + width * 2 + spine, -bleed, flap + width * 2 + spine, -slug); //Top right flap
+	drawLine(flap * 2 + width * 2 + spine, -bleed, flap * 2 + width * 2 + spine, -slug); //Top-right vertical
+	drawLine(flap * 2 + width * 2 + spine + bleed, 0, flap * 2 + width * 2 + spine + slug, 0); //Top-right horizontal
+	//Marks for bottom
+	drawLine(flap, height + bleed, flap, height + slug); //Bottom left flap
+	drawLine(flap + width, height + bleed, flap + width, height + slug); //Bottom spine-left
+	drawLine(flap + width + spine, height + bleed, flap + width + spine, height + slug); //Bottom spine-right
+	drawLine(flap + width * 2 + spine, height + bleed, flap + width * 2 + spine, height + slug); //Bottom right flap
+	drawLine(flap * 2 + width * 2 + spine, height + bleed, flap * 2 + width * 2 + spine, height + slug); //Bottom-right vertical
+	drawLine(flap * 2 + width * 2 + spine + bleed, height, flap * 2 + width * 2 + spine + slug, height); //Bottom-right horizontal
+        drawLine(flap, -bleed, flap, -slug);
+    }
+    else { //non-dustwrappers
+	drawLine(width, -bleed, width, -slug); //Top spine-left
+	drawLine(width + spine, -bleed, width + spine, -slug); //Top spine-right
+	drawLine(width * 2 + spine, -bleed, width * 2 + spine, -slug); //Top-right vertical
+	drawLine(width * 2 + spine + bleed, 0, width * 2 + spine + slug, 0); //Top-right horizontal
+	drawLine(width, height + bleed, width, height + slug); //Bottom spine-left
+	drawLine(width + spine, height + bleed, width + spine, height + slug); //Bottom spine-right
+	drawLine(width * 2 + spine, height + bleed, width * 2 + spine, height + slug); //Bottom-right vertical
+	drawLine(width * 2 + spine + bleed, height, width * 2 + spine + slug, height); //Bottom-right horizontal
+    }
+
+    var marks = doc.layers.item("Trim marks").graphicLines;
+    for (var i = 0; i < marks.count(); i++) {
+        marks.item(i).strokeColor = "Registration";
+        marks.item(i).strokeWeight = "0.5pt";
+    }
+
+    if (coverType === 'rb_dw' || coverType === 'sb_dw') { //dustwrappers: add guides at flaps and wraparounds
+        drawGuide(flap - flapWraparound);
+        drawGuide(flap);
+        drawGuide(doc_width - flap + flapWraparound);
+        drawGuide(doc_width - flap);
+    }
+    else if (coverType === 'rb_plc' || coverType === 'sb_plc') { //PLCS: draw guides showing extent of shoulder
+	drawGuide(width - 9);
+	drawGuide(width + spine + 9);
+    }
+
+    doc.layers.item("Trim marks").locked = true;
+
+    //The following two lines are because I couldn't work out how to make layer 1 active, so had to make a new layer and delete original one
+    var newLayer = doc.layers.add({name:"Main layer"}) ; //Make new layer
+    doc.layers.item(2).remove(); //Get rid of original layer
+    
+        
+}
+
+var results = showDialog();
+
+if (results) {
+    var coverType = results.coverType;
+    var dimensions = calculateDimensions(results.dimensions, coverType);
+
+    makeCover(dimensions, coverType);
+}
+
