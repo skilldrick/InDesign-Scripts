@@ -1,5 +1,5 @@
 //Nick's amazing automatic cover maker
-//Rewritten 8 October
+//Rewritten 8 October 2010
 
 
 var bleeds = {
@@ -145,10 +145,6 @@ function normalise(dimensions) {
 }
 
 function calculateDimensions(unNormalisedDimensions, coverType) {
-    for (var field in unNormalisedDimensions) {
-        $.writeln(unNormalisedDimensions[field]);
-    }
-
     dimensions = normalise(unNormalisedDimensions);
     switch (coverType) {
     case 'pb':
