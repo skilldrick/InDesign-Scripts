@@ -46,49 +46,30 @@ function groupBy(arr, callback) {
 }
 
 function main() {
-    var tagName = "BulletListItem";
-    var parentTagName = "BulletList";
-    var elementIds = [];
-    
-    function findElements() {
-	this.name = "findElements";
-	this.xpath = "//" + tagName;
-	this.apply = function (ele, rule_processor) {
-	    var doc = app.documents.item(0);
-	    
-	    elementIds.push(ele.id);
-	    
-	    return true;
-	}
-
-    }
-
-    if (app.documents.length != 0) {
-	var doc = app.documents.item(0);
-	var rule_set = [new findElements];
-	var elements = doc.xmlElements;
-	__processRuleSet(elements.item(0), rule_set);
-    }
-    else {
-	alert('no open document');
-    }
-
-
     var doc = app.documents.item(0);
-    var xmlElements= app.documents.item(0).xmlElements;
+    var rootElement = app.documents.item(0).xmlElements[0];
 
-    var allElements = [];
-    traverse(xmlElements[0], function (element) {
-	if (elementIds.has(element.id)) {
-	    allElements.push(element);
-	}
-    });
-
-    var groupedIds = group(elementIds);
-    var groupedElements = groupBy(allElements, function (item) { return item.id; });
-
-    
     var tag = doc.xmlTags.item('BulletList');
+    var lastWasBullet = false;
+    var currentListElement;
+    traverse(rootElement, function (element) {
+        if (element.markupTag.name == 'BulletListItem') {
+            if (!lastWasBullet) {
+                currentListElement = element.add(tag);
+                currentListElement = currentListElement.move(LocationOptions.BEFORE, element);
+                element.move(LocationOptions.AT_END, currentListElement);
+            }
+            else {
+                element.move(LocationOptions.AT_END, currentListElement);
+            }
+            lastWasBullet = true;
+        }
+        else {
+            lastWasBullet = false;
+        }
+    });
+/*
+  var tag = doc.xmlTags.item('BulletList');
     for (var i = 0; i < groupedElements.length; i++) {
         var firstListItem = groupedElements[i][0];
         var parentTag = firstListItem.parent.markupTag.name;
@@ -106,6 +87,8 @@ function main() {
             $.writeln(err);
         }
     }
+
+    */
 }
 
 
